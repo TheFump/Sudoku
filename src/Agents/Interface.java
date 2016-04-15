@@ -24,6 +24,7 @@ public class Interface extends Agent {
 	private MySudoku mSudoku;
 	private ArrayList<CaseModel> mSudokuCases;
 	private int mReponse;
+	private AID SimulationAID;
 
 	@Override
 	protected void setup() {
@@ -34,6 +35,7 @@ public class Interface extends Agent {
 		mReponse = 0;
 		mSudoku = new MySudoku();
 		mSudokuCases = new ArrayList<>();
+		SimulationAID = new AID();
 		for(int i = 0; i< 9; i++)//ligne
 		{
 			for(int j = 0; j <9; j++)//colonne
@@ -42,6 +44,7 @@ public class Interface extends Agent {
 			}
 		}
 		mSudoku.printSudoku();
+		System.out.println(PREFIX_MESSAGE + "Bonjour");
 		this.addBehaviour(new Step());
 		
 	}
@@ -60,9 +63,10 @@ public class Interface extends Agent {
 				System.out.println(PREFIX_MESSAGE + "Message reçu : " + tMessage.getContent());
 				if(tMessage.getContent().contains(Constantes.MESSAGE_AGENT_USABLE))
 				{
+					SimulationAID = tMessage.getSender();
 					AgentsModel mAgentsModel = JsonParser.unserialize(tMessage.getContent(), AgentsModel.class);
 					
-					AID tAID = new AID(mAgentsModel.getmAID(), AID.ISLOCALNAME);
+					AID tAID = new AID(mAgentsModel.getmAID());
 					mAgentsAID.add(tAID);
 					mAgentsAvailable++;
 					System.out.println(PREFIX_MESSAGE + "Ajout de l'agent : " + mAgentsModel.getmAID());
@@ -71,6 +75,7 @@ public class Interface extends Agent {
 				if(mAgentsAvailable == Constantes.AGENTS_TO_REGISTER)
 				{
 					mIsDone = true;
+					mAgentsAvailable = 0;
 					Interface.this.addBehaviour(new Repartition());
 				}
 			}	
@@ -80,7 +85,6 @@ public class Interface extends Agent {
 		public boolean done() {
 			return mIsDone;
 		}
-		//todo add behaviour repartition of lines. 
 		//todo add behaviour verification of lines.
 		//todo add behaviour end of simulation
 	}
@@ -89,7 +93,7 @@ public class Interface extends Agent {
 
 		@Override
 		public void action() {
-			//todo récupérer composant sudoku : ligne
+			// récupérer composant sudoku : ligne
 			ArrayList<CaseModel>tCasesArrayList = new ArrayList();
 			for(int i = 0; i < 9; i++)
 			{
@@ -123,7 +127,7 @@ public class Interface extends Agent {
 				mMessagesToSend.add(tMessage);
 				tCasesArrayList.clear();
 			}
-			for(int i = 0; i < 9; i++)
+			for(int i = 0; i < 9; i++) //todo récupérer les 9 cases d'une zone, puis les mettre dans arraylist pour les envoyer.
 			{
 				for(int j = 0; j < 9; j++){
 					tCasesArrayList.add(mSudoku.getmSudoku().getColumn(i).get(j));
@@ -138,6 +142,7 @@ public class Interface extends Agent {
 				mMessagesToSend.add(tMessage);
 				tCasesArrayList.clear();
 			}
+			Interface.this.addBehaviour(new Sender());
 		}
 	}
 	
@@ -151,13 +156,17 @@ public class Interface extends Agent {
 			for(String tItem : mMessagesToSend)
 			{ 
 				ACLMessage tMessage=new ACLMessage(ACLMessage.REQUEST);
-			 	tMessage.addReceiver(mAgentsAID.get(index));
+				AID tAID = new AID();
+				tAID = mAgentsAID.get(index);
+			 	tMessage.addReceiver(tAID);
 				tMessage.setContent(tItem);
 				send(tMessage);
 				System.out.println(PREFIX_MESSAGE +"Message envoyé : " + tMessage.getContent());
+				index++;
 			}
 			mMessagesToSend.clear();
-			//todo attendre réponse	
+			Interface.this.addBehaviour(new Waiter());
+			Interface.this.addBehaviour(new Step());
 		}
 	}
 	
@@ -174,7 +183,7 @@ public class Interface extends Agent {
 				System.out.println(PREFIX_MESSAGE + "Message reçu : " + tMessage.getContent());
 				if(tMessage.getContent().contains(Constantes.MESSAGE_AGENT_REPONSE))
 				{
-					ZoneModel tZoneModel = JsonParser.unserialize(tMessage.getContent(), ZoneModel.class);
+					ZoneModel tZoneModel = JsonParser.unserialize(tMessage.getContent(), ZoneModel.class); //On gère les réponse 1 par 1 par ordre d'arrivée.
 					HandleAnswer(tZoneModel);
 					mReponse++;
 				
@@ -184,7 +193,11 @@ public class Interface extends Agent {
 					mIsDone = true;	
 					mReponse = 0;
 					System.out.println(PREFIX_MESSAGE + "Réponse terminée");
-					
+					if(CheckIfResolved())
+					{
+						System.out.println(PREFIX_MESSAGE + "Fin de la simulation");
+						mSudoku.printSudoku();
+					}
 				}
 			}	
 			
@@ -209,20 +222,30 @@ public class Interface extends Agent {
 			if(sZoneModel.getmZone().contains("Colonne"))
 			{
 				
-					for(int j = 0; j <81; j+=8)//colone
+					for(int j = 0; j <81; j+=9)//colonne : de 9 en 9
 					{
-						mSudokuCases.get(sZoneModel.getmNumber()+j).mergePossible(sZoneModel.getmCases().get(j).getPossibleList());
+						mSudokuCases.get(sZoneModel.getmNumber()+j).mergePossible(sZoneModel.getmCases().get(j/9).getPossibleList()); //on récupère par colonee : numéro de la colonne puis +9
 					}
 				
 			}
 			if(sZoneModel.getmZone().contains("Zone"))
 			{
-				//todo quand on saura comment ca fonctionne
+				//todo faire la meme chose que pour les autres mais avec area
 			}
 		}
 		
-		
-		
+		private boolean CheckIfResolved() //check if endend, if yes stop simulation, if no step.
+		{
+			if (mSudoku.getmSudoku().isCompleted()) //oob here, i completed doesnt work.
+			{
+				ACLMessage tMessage=new ACLMessage(ACLMessage.REQUEST);
+				tMessage.setConversationId(String.valueOf(Constantes.EnderID));
+			 	tMessage.addReceiver(SimulationAID);
+				tMessage.setContent(Constantes.MESSAGE_AGENT_END);
+				return true;
+			}
+			return false;
+		}
 	}
 	
 	

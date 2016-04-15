@@ -1,5 +1,5 @@
 main=false
 gui=false
 container-name=tdtpAlex
-host=172.25.29.226
+host=192.168.1.85
 #local-port=1099

@@ -6,6 +6,7 @@ public class Constantes {
 	public static final String MESSAGE_AGENT_USABLE = "Usable";
 	public static final String MESSAGE_AGENT_9CASES = "Resolve";
 	public static final String MESSAGE_AGENT_REPONSE = "Finished";
+	public static final String MESSAGE_AGENT_END = "End";
 	public static final int AGENTS_TO_REGISTER = 27;
 	public static final long TIMEOUT = 10000;
 	public static final int EnderID = 5000000;

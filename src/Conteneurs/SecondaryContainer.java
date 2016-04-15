@@ -17,15 +17,17 @@ public class SecondaryContainer {
 		try{
 			tProfile=new ProfileImpl(SECONDARY_PROPERTIES_FILE);
 			ContainerController tContainerController = tRuntime.createAgentContainer(tProfile);
-			AgentController tRootControllerSimulation = tContainerController.createNewAgent(Constantes.SIMULATION_NAME,"Agents.Simulation",new Object[]{});
-			tRootControllerSimulation.start();
 			AgentController tRootControllerInterface = tContainerController.createNewAgent(Constantes.INTERFACE_NAME,"Agents.Interface",new Object[]{});
 			tRootControllerInterface.start();
 			Thread.sleep(2000);
-			for(int i = 0; i < Constantes.AGENTS_TO_REGISTER; i++)
+			AgentController tRootControllerSimulation = tContainerController.createNewAgent(Constantes.SIMULATION_NAME,"Agents.Simulation",new Object[]{});
+			tRootControllerSimulation.start();
+			Thread.sleep(2000);
+			for(int i = 0; i < Constantes.AGENTS_TO_REGISTER ; i++)
 			{
 				AgentController tRootControllerEffecteur = tContainerController.createNewAgent(Constantes.EFFECTEUR_NAME + (i+1),"Agents.Effecteur",new Object[]{});
 				tRootControllerEffecteur.start();
+				Thread.sleep(100);
 			}
 		}catch(Exception tException){
 			tException.printStackTrace();

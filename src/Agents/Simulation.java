@@ -130,7 +130,7 @@ public class Simulation extends Agent{
 				block();
 			}else{
 				System.out.println(PREFIX_MESSAGE + "Message reçu : " + tMessage.getContent());
-				if(tMessage.getContent().contains(Constantes.MESSAGE_AGENT_READY))
+				if(tMessage.getContent().contains(Constantes.MESSAGE_AGENT_END))
 				{
 					//todo EndSimulation
 					System.out.println(PREFIX_MESSAGE + "Fin de la simulation");
